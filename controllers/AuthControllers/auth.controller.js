@@ -9,6 +9,8 @@ import sendMail from "../../utils/sendEmail.js";
 import OTP from "../../models/OTPModels/auth.otp.js";
 import { OAuth2Client } from "google-auth-library";
 import Profile from "../../models/ProfileModels/profile.js";
+import Post from "../../models/PostModels/post.model.js";
+import Community from "../../models/CommunityModels/community.model.js";
 
 /* ================= SIGN UP ================= */
 
@@ -524,5 +526,49 @@ export const getProfileImage = async (req, res) => {
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const searchRoutes = async (req, res) => {
+  try {
+    const { q } = req.query;
+
+    if (!q || !q.trim()) {
+      return res.status(200).json({
+        communities: [],
+        posts: [],
+      });
+    }
+
+    const regex = new RegExp(q.trim(), "i");
+
+    // 🔍 SEARCH COMMUNITIES (PURE QUERY)
+    const communities = await Community.find(
+      { communityName: regex },
+      { communityName: 1, isPrivate: 1 }, // projection
+    ).limit(10);
+
+    // 🔍 SEARCH POSTS (PURE QUERY)
+    const posts = await Post.find(
+      {
+        $or: [{ title: regex }, { content: regex }],
+      },
+      {
+        title: 1,
+        content: 1,
+        communityId: 1,
+        createdAt: 1,
+      },
+    ).limit(10);
+
+    return res.status(200).json({
+      communities,
+      posts,
+    });
+  } catch (error) {
+    console.error("Search error:", error);
+    return res.status(500).json({
+      message: "Search failed",
+    });
   }
 };

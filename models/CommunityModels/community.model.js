@@ -18,7 +18,6 @@ const communitySchema = new mongoose.Schema(
     visibility: {
       type: String,
       enum: ["Public", "Private"],
-      required: true,
       default: "Public",
     },
 
@@ -35,10 +34,12 @@ const communitySchema = new mongoose.Schema(
     joinRequests: [
       {
         userId: {
-          // delete this if not working [==> userid :{}]
           type: mongoose.Schema.Types.ObjectId,
           ref: "Auth",
-          require: true, // delete this if not working
+        },
+        createdAt: {
+          type: Date,
+          default: Date.now,
         },
       },
     ],

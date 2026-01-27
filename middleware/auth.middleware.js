@@ -22,7 +22,20 @@ const protect = async (req, res, next) => {
 
       next();
     } catch (error) {
-      return res.status(401).json({ success: false, message: "Invalid token" });
+      // Token Expired Case
+      if (error.name === "TokenExpiredError") {
+        return res.status(401).json({
+          success: false,
+          message: "Token Expired",
+          code: "TOKEN_EXPIRED",
+        });
+      }
+      // Invalid Token Case
+      return res.status(401).json({
+        success: false,
+        message: "Invalid token",
+        code: "INVALID_TOKEN",
+      });
     }
   }
   //   console.log("Authorization header == ", req.headers.authorization);

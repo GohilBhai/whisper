@@ -295,491 +295,6 @@ export const joinPublicCommunity = async (req, res) => {
   }
 };
 
-// export const getAllCommunityMembers = async (req, res) => {
-//   try {
-//     const communityId = req.params.id;
-//     // console.log("Community ID:", communityId);
-
-//     if (!mongoose.Types.ObjectId.isValid(communityId)) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Invalid Community ID",
-//       });
-//     }
-
-//     const community = await Community.aggregate([
-//       {
-//         $match: {
-//           _id: new mongoose.Types.ObjectId(communityId),
-//         },
-//       },
-//       {
-//         $addFields: {
-//           members: { $ifNull: ["$members", []] },
-//         },
-//       },
-//       {
-//         $lookup: {
-//           from: "auths",
-//           localField: "members",
-//           foreignField: "_id",
-//           as: "membersList",
-//         },
-//       },
-//       {
-//         $project: {
-//           "membersList.password": 0,
-//           "membersList.__v": 0,
-//           "membersList.token": 0,
-//         },
-//       },
-//     ]);
-
-//     if (!community || community.length === 0) {
-//       return res.status(404).json({
-//         success: false,
-//         message: "Community Not Found",
-//       });
-//     }
-
-//     res.status(200).json({
-//       success: true,
-//       data: community[0].membersList,
-//     });
-//     // console.log("community[0].membersList = ", community[0].membersList);
-//   } catch (error) {
-//     console.error("Get Members Error:", error);
-//     return res.status(500).json({
-//       success: false,
-//       message: "Server Error",
-//     });
-//   }
-// };
-
-export const getAllCommunityMembers = async (req, res) => {
-  try {
-    const communityId = req.params.id;
-    const userId = req.user._id;
-
-    // console.log(" getAllCommunityMembers userid = ", userId);
-    // console.log("getAllCommunityMembers communityId from url = ", communityId);
-    if (!mongoose.Types.ObjectId.isValid(communityId)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid Community ID",
-      });
-    }
-
-    const community = await Community.findById(communityId);
-
-    if (!community) {
-      return res.status(404).json({
-        success: false,
-        message: "Community Not Found",
-      });
-    }
-
-    const isMember = community.members.some(
-      (memberId) => memberId.toString() === userId.toString(),
-    );
-
-    if (!isMember) {
-      return res.status(403).json({
-        success: false,
-        message: "You must join the community to view it",
-      });
-    }
-
-    // ✅ Now fetch members
-    const members = await Community.aggregate([
-      {
-        $match: {
-          _id: new mongoose.Types.ObjectId(communityId),
-        },
-      },
-      {
-        $lookup: {
-          from: "auths",
-          localField: "members",
-          foreignField: "_id",
-          as: "membersList",
-        },
-      },
-      {
-        $project: {
-          "membersList.password": 0,
-          "membersList.__v": 0,
-          "membersList.token": 0,
-        },
-      },
-    ]);
-
-    res.status(200).json({
-      success: true,
-      data: members[0].membersList,
-    });
-  } catch (error) {
-    console.error("Get Members Error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Server Error",
-    });
-  }
-};
-
-// Approve private community join Requests API
-
-export const approvePrivateCommunityJoinRequests = async (req, res) => {
-  try {
-    const adminId = req.user.id;
-    const { communityId, userId } = req.params;
-
-    const community = await Community.findById(communityId);
-
-    if (!community) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Community Not Found" });
-    }
-
-    if (community.members.includes(userId)) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Join Request Already Sent" });
-    }
-
-    if (community.userId.toString() !== adminId) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Only Admin can Approve" });
-    }
-
-    if (!community.joinRequests.includes(userId)) {
-      return res
-        .status(404)
-        .json({ success: false, message: "No Join Requests Found" });
-    }
-
-    community.joinRequests.pull(userId);
-    community.members.push(userId);
-    await community.save();
-
-    return res
-      .status(200)
-      .json({ success: false, message: "Approve Request Success By Admin" });
-  } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
-  }
-};
-
-// reject private community request API
-export const rejectPrivateCommunityJoinRequests = async (req, res) => {
-  try {
-    const adminId = req.user.id;
-    const { communityId, userId } = req.params;
-
-    const community = await Community.findById(communityId);
-
-    if (!community) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Community Not Found" });
-    }
-
-    if (community.userId.toString() !== adminId) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Only Admin Can Reject" });
-    }
-
-    community.joinRequests.pull(userId);
-    await community.save();
-
-    return res
-      .status(200)
-      .json({ success: true, message: "User Rejected By Admin" });
-  } catch (error) {
-    return res.status(500).json({ success: false, message: "" });
-  }
-};
-
-// all private community data get (Fetch) API
-
-// export const getCommunityDetails = async (req, res) => {
-//   try {
-//     const { communityId } = req.params;
-//     const userId = new mongoose.Types.ObjectId(req.user.id);
-//     console.log("loged in user getCommunityDetails userid = ", userId);
-//     console.log("getCommunityDetails communityId from url = ", communityId);
-
-//     const data = await Community.aggregate([
-//       {
-//         $match: {
-//           _id: new mongoose.Types.ObjectId(communityId),
-//           // userId: userId,
-//           isDeleted: false,
-//         },
-//       },
-//       {
-//         $lookup: {
-//           from: "auths",
-//           localField: "members",
-//           foreignField: "_id",
-//           as: "members",
-//         },
-//       },
-//       {
-//         $lookup: {
-//           from: "auths",
-//           localField: "joinRequests",
-//           foreignField: "_id",
-//           as: "joinRequests",
-//         },
-//       },
-//       {
-//         $addFields: {
-//           isAdmin: { $eq: ["$userId", userId] },
-//           isMember: { $in: [userId, "$members._id"] },
-//           requestSent: { $in: [userId, "$joinRequests._id"] },
-//         },
-//       },
-//       {
-//         $project: {
-//           _id: 1,
-//           comunityName: 1,
-//           communityDisc: 1,
-//           visibility: 1,
-
-//           isAdmin: 1,
-//           isMember: 1,
-//           requestSent: 1,
-
-//           members: {
-//             $map: {
-//               input: "$members",
-//               as: "m",
-//               in: { _id: "$$m._id", email: "$$m.email" },
-//             },
-//           },
-//           joinRequests: {
-//             $map: {
-//               input: "$joinRequests",
-//               as: "j",
-//               in: { _id: "$$j._id", email: "$$j.email" },
-//             },
-//           },
-//         },
-//       },
-//     ]);
-
-//     res.status(200).json(data[0]);
-//   } catch (error) {
-//     res.status(500).json({ success: false, message: error.message });
-//   }
-// };
-////
-
-// export const getCommunityDetails = async (req, res) => {
-//   try {
-//     const { communityId } = req.params;
-//     const userId = new mongoose.Types.ObjectId(req.user._id);
-//     console.log("get community details controller :", req.user._id);
-
-//     const data = await Community.aggregate([
-//       {
-//         $match: {
-//           _id: new mongoose.Types.ObjectId(communityId),
-//           // userId: userId,
-//           isDeleted: false,
-//         },
-//       },
-//       {
-//         $lookup: {
-//           from: "auths",
-//           localField: "members",
-//           foreignField: "_id",
-//           as: "members",
-//         },
-//       },
-//       {
-//         $lookup: {
-//           from: "auths",
-//           localField: "joinRequests",
-//           foreignField: "_id",
-//           as: "joinRequests",
-//         },
-//       },
-//       {
-//         $addFields: {
-//           isAdmin: { $eq: ["$userId", userId] },
-//           isMember: { $in: [userId, "$members._id"] },
-//           requestSent: { $in: [userId, "$joinRequests._id"] },
-//         },
-//       },
-//       {
-//         $project: {
-//           _id: 1,
-//           comunityName: 1,
-//           communityDisc: 1,
-//           visibility: 1,
-//           isAdmin: 1,
-//           isMember: 1,
-//           requestSent: 1,
-//           members: {
-//             $map: {
-//               input: "$members",
-//               as: "m",
-//               in: { _id: "$$m._id", email: "$$m.email" },
-//             },
-//           },
-//           joinRequests: {
-//             $map: {
-//               input: "$joinRequests",
-//               as: "j",
-//               in: { _id: "$$j._id", email: "$$j.email" },
-//             },
-//           },
-//         },
-//       },
-//     ]);
-
-//     const community = data[0];
-
-//     // 🔒 PRIVATE ACCESS BLOCK
-//     if (
-//       community.visibility === "Private" &&
-//       !community.isAdmin &&
-//       !community.isMember
-//     ) {
-//       return res.status(403).json({
-//         success: false,
-//         message: "Private community. Access denied.",
-//       });
-//     }
-
-//     res.status(200).json(community);
-//   } catch (error) {
-//     res.status(500).json({ success: false, message: error.message });
-//   }
-// };
-
-// export const getCommunityDetails = async (req, res) => {
-//   try {
-//     const { communityId } = req.params;
-//     const userId = new mongoose.Types.ObjectId(req.user.id);
-//     console.log("get community details controler code = ", userId);
-
-//     // 1️⃣ Basic community
-//     const communityBase = await Community.findOne({
-//       _id: communityId,
-//       isDeleted: false,
-//     });
-
-//     if (!communityBase) {
-//       return res.status(404).json({ message: "Community not found" });
-//     }
-
-//     const isAdmin = communityBase.userId.equals(userId);
-
-//     const isMember = await Community.exists({
-//       _id: communityId,
-//       members: userId,
-//     });
-
-//     // 2️⃣ PRIVATE ACCESS CHECK
-//     if (communityBase.visibility === "Private" && !isAdmin && !isMember) {
-//       return res.status(403).json({
-//         success: false,
-//         message: "Private community. Send join request first.",
-//       });
-//     }
-
-//     // 3️⃣ Full data only AFTER access allowed
-//     const data = await Community.aggregate([
-//       { $match: { _id: communityBase._id } },
-//       {
-//         $lookup: {
-//           from: "auths",
-//           localField: "members",
-//           foreignField: "_id",
-//           as: "members",
-//         },
-//       },
-//       {
-//         $lookup: {
-//           from: "auths",
-//           localField: "joinRequests",
-//           foreignField: "_id",
-//           as: "joinRequests",
-//         },
-//       },
-//     ]);
-
-//     res.status(200).json(data[0]);
-//   } catch (error) {
-//     res.status(500).json({ message: error.message });
-//   }
-// };
-
-// export const getAllCommunities = async (req, res) => {
-//   try {
-//     const userId = new mongoose.Types.ObjectId(req.user._id);
-
-//     console.log("getall community controler code = ", userId);
-//     const data = await Community.aggregate([
-//       {
-//         $match: { isDeleted: false },
-//       },
-//       {
-//         $addFields: {
-//           isAdmin: { $eq: ["$userId", userId] },
-//           isMember: { $in: [userId, "$members"] },
-//           requestSent: { $in: [userId, "$joinRequests"] },
-//         },
-//       },
-//       {
-//         $project: {
-//           comunityName: 1,
-//           communityDisc: 1,
-//           visibility: 1,
-//           isAdmin: 1,
-//           isMember: 1,
-//           requestSent: 1,
-//         },
-//       },
-//     ]);
-
-//     res.status(200).json({ success: true, data });
-//   } catch (error) {
-//     res.status(500).json({ success: false, message: error.message });
-//   }
-// };
-
-// export const getCommunityDetails = async (req, res) => {
-//   try {
-//     console.log("getAllCommunity API hit");
-
-//     const userId = req.user._id; //  logged in user id
-//     console.log("userId Loged In getCommunity Details userId = ", userId);
-//     const data = await Community.find({ isDeleted: false }).lean();
-//     console.log("Raw community data", data);
-
-//     const finalData = data.map((c) => ({
-//       ...c,
-//       isAdmin: c.userId.toString() === userId, //  admin check
-//       isMember: c.members.some((m) => m.toString() === userId), //  member check
-//       isRequested: c.joinRequests.some((r) => r.toString() === userId), // request sent check
-//     }));
-
-//     console.log("Final community list with flags", finalData);
-
-//     res.status(200).json({ success: true, data: finalData });
-//   } catch (error) {
-//     console.log("getAllCommunity error", error);
-//     res.status(500).json({ success: false, message: error.message });
-//   }
-// };
-
 export const getCommunityDetails = async (req, res) => {
   try {
     const { communityId } = req.params;
@@ -806,3 +321,57 @@ export const getCommunityDetails = async (req, res) => {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
+
+export const getMembers = async (req, res) => {
+  try {
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({
+        success: false,
+        message: "User not authenticated",
+      });
+    }
+
+    const { communityId } = req.params;
+    const userId = req.user._id;
+
+    if (!mongoose.Types.ObjectId.isValid(communityId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid community id",
+      });
+    }
+
+    const community = await Community.findById(communityId)
+      .populate("members", "email _id")
+      .populate("userId", "email _id");
+
+    if (!community) {
+      return res.status(404).json({
+        success: false,
+        message: "Community not found",
+      });
+    }
+
+    // Check if user is admin
+    const isAdmin = community.userId._id.toString() === userId.toString();
+
+    // ✅ Return members + admin status
+    return res.status(200).json({
+      success: true,
+      message: "Members fetched successfully",
+      data: {
+        members: community.members,
+        joinRequests: community.joinRequests, // Send full array
+        isAdmin: isAdmin,
+        adminId: community.userId._id,
+      },
+    });
+  } catch (error) {
+    console.error("Get members error:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
