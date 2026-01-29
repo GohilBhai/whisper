@@ -34,6 +34,11 @@ import {
   getMembers,
   showMyCommunity,
 } from "../controllers/CommunityControllers/community.controller.js";
+import {
+  getMessages,
+  sendMessage,
+} from "../controllers/messageControllers/messageController.js";
+import checkCommunityAccess from "../middleware/checkCommunityAccess.js";
 
 //====================================================================
 
@@ -104,7 +109,7 @@ route.get("/post/public", getPublicPosts);
 
 // Shows ONLY private posts for that specific community  (Community Page)
 
-route.get("/community/:communityId", protect, getCommunityPosts);
+route.get("/community/:id/posts", protect, getCommunityPosts);
 
 route.delete("/post/:id", protect, deletePost);
 
@@ -117,6 +122,26 @@ route.put("/profile", protect, profile);
 route.post("/profile", protect, upload.single("image"), profileImage);
 
 route.get("/profile", protect, getProfileImage);
+
+//====================================================================
+
+// message routes
+
+// ✅ Get messages (only members/admin)
+route.get(
+  "/community/:communityId/messages",
+  protect,
+  checkCommunityAccess,
+  getMessages,
+);
+
+// ✅ Send message (only members/admin)
+route.post(
+  "/community/:communityId/message",
+  protect,
+  checkCommunityAccess,
+  sendMessage,
+);
 
 //====================================================================
 

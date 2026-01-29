@@ -445,11 +445,11 @@ export const getPublicPosts = async (req, res) => {
 
 export const getCommunityPosts = async (req, res) => {
   try {
-    const { communityId } = req.params;
+    const { id } = req.params;
     const userId = req.user._id; // from protect middleware
 
     // 1️⃣ Validate communityId
-    if (!mongoose.Types.ObjectId.isValid(communityId)) {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
         success: false,
         message: "Invalid community ID",
@@ -458,7 +458,7 @@ export const getCommunityPosts = async (req, res) => {
     }
 
     // 2️⃣ Check community exists
-    const community = await Community.findById(communityId);
+    const community = await Community.findById(id);
 
     if (!community) {
       return res.status(404).json({
@@ -482,7 +482,7 @@ export const getCommunityPosts = async (req, res) => {
     const posts = await Post.aggregate([
       {
         $match: {
-          communityId: new mongoose.Types.ObjectId(communityId),
+          communityId: new mongoose.Types.ObjectId(id),
           visibility: visibilityFilter,
           isDeleted: false,
         },

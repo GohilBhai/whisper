@@ -375,3 +375,102 @@ export const getMembers = async (req, res) => {
   }
 };
 
+//  ❌❌ remove this code ❌❌ ⬇ ⏬
+// export const getCommunityDetails = async (req, res) => {
+//   try {
+//     const { id } = req.params;
+//     const userId = req.user._id; // From auth middleware
+
+//     const community = await Community.aggregate([
+//       {
+//         $match: {
+//           _id: new mongoose.Types.ObjectId(id),
+//           isDeleted: false,
+//         },
+//       },
+//       {
+//         $lookup: {
+//           from: "auths",
+//           localField: "userId",
+//           foreignField: "_id",
+//           as: "creator",
+//         },
+//       },
+//       {
+//         $unwind: "$creator",
+//       },
+//       {
+//         $project: {
+//           comunityName: 1,
+//           communityDisc: 1,
+//           visibility: 1,
+//           userId: 1,
+//           members: 1,
+//           joinRequests: 1,
+//           createdAt: 1,
+//           "creator.name": 1,
+//           "creator.profilePicture": 1,
+//         },
+//       },
+//     ]);
+
+//     if (!community || community.length === 0) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "Community not found",
+//       });
+//     }
+
+//     const communityData = community[0];
+
+//     // Check if user is admin
+//     const isAdmin = communityData.userId.toString() === userId.toString();
+
+//     // Check if user is member
+//     const isMember = communityData.members.some(
+//       (memberId) => memberId.toString() === userId.toString(),
+//     );
+
+//     // Check if user has pending join request
+//     const hasPendingRequest = communityData.joinRequests.some(
+//       (req) => req.userId.toString() === userId.toString(),
+//     );
+
+//     // For private communities, limit data if not member/admin
+//     if (communityData.visibility === "Private" && !isAdmin && !isMember) {
+//       return res.status(200).json({
+//         success: true,
+//         message: "Community details (limited access)",
+//         data: {
+//           comunityName: communityData.comunityName,
+//           communityDisc: communityData.communityDisc,
+//           visibility: communityData.visibility,
+//           isAdmin: false,
+//           isMember: false,
+//           hasPendingRequest,
+//           canAccessChat: false,
+//         },
+//       });
+//     }
+
+//     return res.status(200).json({
+//       success: true,
+//       message: "Community details fetched successfully",
+//       data: {
+//         ...communityData,
+//         isAdmin,
+//         isMember,
+//         hasPendingRequest,
+//         canAccessChat: isAdmin || isMember,
+//         memberCount: communityData.members.length,
+//       },
+//     });
+//   } catch (error) {
+//     console.error("Get Community Error:", error);
+//     return res.status(500).json({
+//       success: false,
+//       message: "Failed to fetch community",
+//       error: error.message,
+//     });
+//   }
+// };
