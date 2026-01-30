@@ -39,6 +39,14 @@ import {
   sendMessage,
 } from "../controllers/messageControllers/messageController.js";
 import checkCommunityAccess from "../middleware/checkCommunityAccess.js";
+import {
+  getAllUserChats,
+  getDirectMessages,
+  getOrCreateDirectChat,
+  getUserById,
+  markMessagesAsRead,
+  sendDirectMessage,
+} from "../controllers/messageControllers/directChatController.js";
 
 //====================================================================
 
@@ -143,6 +151,23 @@ route.post(
   sendMessage,
 );
 
+// ✅ Get user by ID
+route.get("/users/:userId", protect, getUserById);
+
+// ✅ Get or create direct chat
+route.post("/direct-chat/create", protect, getOrCreateDirectChat);
+
+// ✅ Get all messages for a chat
+route.get("/direct-chat/:chatId/messages", protect, getDirectMessages);
+
+// ✅ Send message (HTTP backup)
+route.post("/direct-chat/send", protect, sendDirectMessage);
+
+// ✅ Get all user chats
+route.get("/direct-chat/all", protect, getAllUserChats);
+
+// ✅ Mark messages as read
+route.put("/direct-chat/:chatId/read", protect, markMessagesAsRead);
 //====================================================================
 
 export default route;
