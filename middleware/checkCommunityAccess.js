@@ -3,7 +3,7 @@ import Community from "../models/CommunityModels/community.model.js";
 const checkCommunityAccess = async (req, res, next) => {
   try {
     const { communityId } = req.params;
-    const userId = req.user._id; // Assuming you have auth middleware that sets req.user
+    const userId = req.user._id; //  auth middleware that sets req.user
 
     // Find community
     const community = await Community.findById(communityId);

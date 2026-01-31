@@ -4,28 +4,28 @@ import DirectMessage from "../models/MessageModels/DirectMessage.js";
 
 export const setupDirectChatSocket = (io) => {
   io.on("connection", (socket) => {
-    console.log("🔌 Direct Chat - User connected:", socket.id);
+    // console.log(" Direct Chat - User connected:", socket.id);
 
-    // ✅ Join chat room
+    //  Join chat room
     socket.on("join_direct_chat", (chatId) => {
       socket.join(chatId);
-      console.log(`👥 User ${socket.id} joined direct chat: ${chatId}`);
+      // console.log(` User ${socket.id} joined direct chat: ${chatId}`);
     });
 
-    // ✅ Send message in real-time
+    //  Send message in real-time
     socket.on("send_direct_message", async (data) => {
       try {
         const { chatId, senderId, receiverId, message } = data;
 
-        console.log("💬 Direct message received:");
-        console.log("Chat ID:", chatId);
-        console.log("Sender ID:", senderId);
-        console.log("Receiver ID:", receiverId);
-        console.log("Message:", message);
+        // console.log(" Direct message received:");
+        // console.log("Chat ID:", chatId);
+        // console.log("Sender ID:", senderId);
+        // console.log("Receiver ID:", receiverId);
+        // console.log("Message:", message);
 
         // Validate inputs
         if (!chatId || !senderId || !receiverId || !message) {
-          console.log("❌ Invalid message data");
+          // console.log(" Invalid message data");
           socket.emit("message_error", {
             success: false,
             message: "Invalid message data",
@@ -41,7 +41,7 @@ export const setupDirectChatSocket = (io) => {
           message: message.trim(),
         });
 
-        console.log("✅ Message saved to DB:", newMessage._id);
+        // console.log(" Message saved to DB:", newMessage._id);
 
         // Update last message in chat
         await DirectChat.findByIdAndUpdate(chatId, {
@@ -101,12 +101,12 @@ export const setupDirectChatSocket = (io) => {
 
         const populatedMessage = populatedMessages[0];
 
-        console.log("✅ Message populated, broadcasting to room:", chatId);
+        // console.log(" Message populated, broadcasting to room:", chatId);
 
         // Broadcast message to all users in the chat room
         io.to(chatId).emit("receive_direct_message", populatedMessage);
       } catch (error) {
-        console.error("❌ Socket send_direct_message error:", error);
+        console.error(" Socket send_direct_message error:", error);
         socket.emit("message_error", {
           success: false,
           message: "Failed to send message",
@@ -115,29 +115,29 @@ export const setupDirectChatSocket = (io) => {
       }
     });
 
-    // ✅ Typing indicator
+    //  Typing indicator
     socket.on("typing_direct", (data) => {
       const { chatId, username } = data;
-      console.log(`⌨️ ${username} is typing in chat: ${chatId}`);
+      // console.log(` ${username} is typing in chat: ${chatId}`);
       socket.to(chatId).emit("user_typing_direct", { username });
     });
 
-    // ✅ Stop typing
+    //  Stop typing
     socket.on("stop_typing_direct", (data) => {
       const { chatId } = data;
-      console.log(`⌨️ User stopped typing in chat: ${chatId}`);
+      // console.log(` User stopped typing in chat: ${chatId}`);
       socket.to(chatId).emit("user_stop_typing_direct");
     });
 
-    // ✅ Leave chat room
+    //  Leave chat room
     socket.on("leave_direct_chat", (chatId) => {
       socket.leave(chatId);
-      console.log(`👋 User ${socket.id} left direct chat: ${chatId}`);
+      // console.log(` User ${socket.id} left direct chat: ${chatId}`);
     });
 
-    // ✅ Disconnect
+    //  Disconnect
     socket.on("disconnect", () => {
-      console.log("❌ Direct Chat - User disconnected:", socket.id);
+      console.log(" Direct Chat - User disconnected:", socket.id);
     });
   });
 };

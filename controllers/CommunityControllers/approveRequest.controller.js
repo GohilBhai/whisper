@@ -3,7 +3,7 @@ import Community from "../../models/CommunityModels/community.model.js";
 
 export const getPendingRequests = async (req, res) => {
   try {
-    // ✅ FIX 1: Check if user exists
+    //  Check if user exists
     if (!req.user || !req.user._id) {
       return res.status(401).json({
         success: false,
@@ -31,7 +31,7 @@ export const getPendingRequests = async (req, res) => {
       });
     }
 
-    // ✅ FIX 2: Safe comparison with null check
+    // Safe comparison with null check
     if (
       !community.userId ||
       community.userId.toString() !== adminId.toString()
@@ -42,7 +42,7 @@ export const getPendingRequests = async (req, res) => {
       });
     }
 
-    // ✅ FIX 3: Handle empty joinRequests array
+    //  Handle empty joinRequests array
     if (!community.joinRequests || community.joinRequests.length === 0) {
       return res.status(200).json({
         success: true,
@@ -92,7 +92,7 @@ export const getPendingRequests = async (req, res) => {
       data,
     });
   } catch (error) {
-    console.error("Pending request error:", error);
+    // console.error("Pending request error:", error);
     return res.status(500).json({
       success: false,
       message: error.message,
@@ -100,15 +100,9 @@ export const getPendingRequests = async (req, res) => {
   }
 };
 
-////////////////////////
-
-// =====================================================
-// NEW CONTROLLERS: approveRequest.controller.js & rejectRequest.controller.js
-// =====================================================
-
 export const approveRequest = async (req, res) => {
   try {
-    // ✅ CHECK 1: User authentication
+    //  User authentication
     if (!req.user || !req.user._id) {
       return res.status(401).json({
         success: false,
@@ -119,7 +113,7 @@ export const approveRequest = async (req, res) => {
     const { communityId, userId } = req.params;
     const adminId = req.user._id;
 
-    // ✅ CHECK 2: Parameters exist
+    //  Parameters exist
     if (!communityId || !userId) {
       return res.status(400).json({
         success: false,
@@ -127,7 +121,7 @@ export const approveRequest = async (req, res) => {
       });
     }
 
-    // ✅ CHECK 3: Valid IDs
+    //  Valid IDs
     if (
       !mongoose.Types.ObjectId.isValid(communityId) ||
       !mongoose.Types.ObjectId.isValid(userId)
@@ -138,7 +132,7 @@ export const approveRequest = async (req, res) => {
       });
     }
 
-    // ✅ CHECK 4: Community exists
+    //  Community exists
     const community = await Community.findById(communityId);
     if (!community) {
       return res.status(404).json({
@@ -147,7 +141,7 @@ export const approveRequest = async (req, res) => {
       });
     }
 
-    // ✅ CHECK 5: Admin check
+    //  Admin check
     if (!community.userId) {
       return res.status(500).json({
         success: false,
@@ -162,7 +156,7 @@ export const approveRequest = async (req, res) => {
       });
     }
 
-    // ✅ CHECK 6: Initialize arrays
+    //  Initialize arrays
     if (!Array.isArray(community.members)) {
       community.members = [];
     }
@@ -213,7 +207,7 @@ export const approveRequest = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Approve request error:", error);
+    // console.error("Approve request error:", error);
     return res.status(500).json({
       success: false,
       message: error.message,
@@ -221,12 +215,11 @@ export const approveRequest = async (req, res) => {
   }
 };
 
-// =====================================================
-// 5. REJECT REQUEST (Fixed)
-// =====================================================
+// 5. Reject Request
+
 export const rejectRequest = async (req, res) => {
   try {
-    // ✅ CHECK 1: User authentication
+    //  User authentication
     if (!req.user || !req.user._id) {
       return res.status(401).json({
         success: false,
@@ -237,7 +230,7 @@ export const rejectRequest = async (req, res) => {
     const { communityId, userId } = req.params;
     const adminId = req.user._id;
 
-    // ✅ CHECK 2: Parameters exist
+    //  Parameters exist
     if (!communityId || !userId) {
       return res.status(400).json({
         success: false,
@@ -245,7 +238,7 @@ export const rejectRequest = async (req, res) => {
       });
     }
 
-    // ✅ CHECK 3: Valid IDs
+    //  Valid IDs
     if (
       !mongoose.Types.ObjectId.isValid(communityId) ||
       !mongoose.Types.ObjectId.isValid(userId)
@@ -256,7 +249,7 @@ export const rejectRequest = async (req, res) => {
       });
     }
 
-    // ✅ CHECK 4: Community exists
+    //  Community exists
     const community = await Community.findById(communityId);
     if (!community) {
       return res.status(404).json({
@@ -265,7 +258,7 @@ export const rejectRequest = async (req, res) => {
       });
     }
 
-    // ✅ CHECK 5: Admin check
+    //  Admin check
     if (!community.userId) {
       return res.status(500).json({
         success: false,
@@ -280,7 +273,7 @@ export const rejectRequest = async (req, res) => {
       });
     }
 
-    // ✅ CHECK 6: joinRequests array exists
+    //  joinRequests array exists
     if (!Array.isArray(community.joinRequests)) {
       community.joinRequests = [];
     }
@@ -309,7 +302,7 @@ export const rejectRequest = async (req, res) => {
       message: "Request rejected successfully",
     });
   } catch (error) {
-    console.error("Reject request error:", error);
+    // console.error("Reject request error:", error);
     return res.status(500).json({
       success: false,
       message: error.message,

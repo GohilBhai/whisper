@@ -2,7 +2,7 @@ import Community from "../../models/CommunityModels/community.model.js";
 
 export const joinCommunity = async (req, res) => {
   try {
-    // ✅ FIX 1: Check if user exists
+    //  Check if user exists
     if (!req.user || !req.user._id) {
       return res.status(401).json({
         success: false,
@@ -13,7 +13,7 @@ export const joinCommunity = async (req, res) => {
     const userId = req.user._id;
     const { id } = req.params;
 
-    // ✅ FIX 2: Validate community ID
+    //  Validate community ID
     if (!id) {
       return res.status(400).json({
         success: false,
@@ -82,7 +82,7 @@ export const joinCommunity = async (req, res) => {
       message: "Invalid community visibility",
     });
   } catch (error) {
-    console.error("Join community error:", error);
+    // console.error("Join community error:", error);
     res.status(500).json({
       success: false,
       message: error.message,

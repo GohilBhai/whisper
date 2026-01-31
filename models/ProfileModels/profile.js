@@ -12,7 +12,7 @@ const ProfileSchema = new mongoose.Schema(
       required: true,
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 const Profile = new mongoose.model("Profile", ProfileSchema);

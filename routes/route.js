@@ -2,8 +2,7 @@ import express from "express";
 import {
   forgotPassword,
   getProfileImage,
-  googleAuth,
-  googleAuthLogin,
+  googleLogin,
   profile,
   profileImage,
   resetPassword,
@@ -14,11 +13,15 @@ import {
 } from "../controllers/AuthControllers/auth.controller.js";
 import protect from "../middleware/auth.middleware.js";
 import {
+  addComment,
   createPost,
+  deleteComment,
   deletePost,
+  getComments,
   getCommunityPosts,
   getMyPosts,
   getPublicPosts,
+  toggleLike,
 } from "../controllers/PostControllers/post.controller.js";
 import upload from "../middleware/upload.js";
 import { joinCommunity } from "../controllers/CommunityControllers/joinCommunity.controller.js";
@@ -47,6 +50,8 @@ import {
   markMessagesAsRead,
   sendDirectMessage,
 } from "../controllers/messageControllers/directChatController.js";
+import { getFeed } from "../controllers/PostControllers/feed.controller.js";
+import { searchPostsAndCommunities } from "../controllers/SearchControllers/Search.controller.js";
 
 //====================================================================
 
@@ -70,11 +75,9 @@ route.post("/signout", protect, signout);
 
 //====================================================================
 
-// google login
+// google Oauth login Routes
 
-route.get("/google-login", googleAuthLogin);
-
-route.get("/google", googleAuth);
+route.post("/google-login", googleLogin);
 
 //====================================================================
 
@@ -101,7 +104,8 @@ route.post("/community/:communityId/approve/:userId", protect, approveRequest);
 route.post("/community/:communityId/reject/:userId", protect, rejectRequest);
 
 //====================================================================
-// 📄 post routes
+
+//  post routes
 
 // CREATE a new post (public or private)
 route.post("/post", protect, createPost);
@@ -121,6 +125,30 @@ route.get("/community/:id/posts", protect, getCommunityPosts);
 
 route.delete("/post/:id", protect, deletePost);
 
+//===================================================================
+//  Like Routes
+
+route.post("/post/:postId/like", protect, toggleLike);
+
+// Comments Routes
+
+route.post("/post/:postId/comment", protect, addComment);
+
+route.get("/post/:postId/comments", getComments);
+
+route.delete("/comment/:commentId", protect, deleteComment);
+
+//===================================================================
+
+// Recent,trending and popular Routes
+
+route.get("/post/feed", getFeed);
+
+//====================================================================
+
+// search routes
+route.get("/search", protect, searchPostsAndCommunities);
+
 //====================================================================
 
 // profile
@@ -135,7 +163,7 @@ route.get("/profile", protect, getProfileImage);
 
 // message routes
 
-// ✅ Get messages (only members/admin)
+//  Get messages (only members/admin)
 route.get(
   "/community/:communityId/messages",
   protect,
@@ -143,7 +171,7 @@ route.get(
   getMessages,
 );
 
-// ✅ Send message (only members/admin)
+//  Send message (only members/admin)
 route.post(
   "/community/:communityId/message",
   protect,
@@ -151,23 +179,24 @@ route.post(
   sendMessage,
 );
 
-// ✅ Get user by ID
+//  Get user by ID
 route.get("/users/:userId", protect, getUserById);
 
-// ✅ Get or create direct chat
+//  Get or create direct chat
 route.post("/direct-chat/create", protect, getOrCreateDirectChat);
 
-// ✅ Get all messages for a chat
+//  Get all messages for a chat
 route.get("/direct-chat/:chatId/messages", protect, getDirectMessages);
 
-// ✅ Send message (HTTP backup)
+//  Send message (HTTP backup)
 route.post("/direct-chat/send", protect, sendDirectMessage);
 
-// ✅ Get all user chats
+// Get all user chats
 route.get("/direct-chat/all", protect, getAllUserChats);
 
-// ✅ Mark messages as read
+// Mark messages as read
 route.put("/direct-chat/:chatId/read", protect, markMessagesAsRead);
+
 //====================================================================
 
 export default route;

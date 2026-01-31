@@ -1,4 +1,5 @@
 import Auth from "../../models/AuthModels/auth.model.js";
+import axios from "axios";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import {
@@ -48,14 +49,6 @@ export const signup = async (req, res) => {
 
     const hashPassword = await bcrypt.hash(password, 10);
 
-    // this is not good for password and confirmpassword checking for sending req to backend  ❌❌
-    // if (password !== confirmpassword) {
-    //   return res.status(400).json({
-    //     success: false,
-    //     message: "Password and confirm password are NoT Matched!",
-    //   });
-    // }
-
     const newUser = new Auth({
       email,
       password: hashPassword,
@@ -71,7 +64,7 @@ export const signup = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("signup Error : ", error);
+    // console.error("signup Error : ", error);
     return res.status(500).json({
       success: false,
       message: "Server error. Please try again later.",
@@ -146,7 +139,7 @@ export const signin = async (req, res) => {
       user: { _id: user._id, email: user.email },
     });
   } catch (error) {
-    console.error("signin Error : ", error);
+    // console.error("signin Error : ", error);
     return res.status(500).json({
       success: false,
       message: "Server error. Please try again later.",
@@ -235,19 +228,19 @@ export const verifyOtp = async (req, res) => {
         .json({ success: false, message: "OTP Is Required" });
     }
 
-    // ✅ find OTP
+    //  find OTP
     const otpRecord = await OTP.findOne({ email, otp });
 
     if (!otpRecord) {
       return res.status(400).json({ success: false, message: "OTP not found" });
     }
 
-    // ✅ match OTP
+    //  match OTP
     if (otpRecord.otp !== otp) {
       return res.status(400).json({ success: false, message: "Invalid OTP" });
     }
 
-    // ✅ expiry check (FIXED)
+    //  expiry check
     if (Date.now() > otpRecord.otpExpiry) {
       return res.status(400).json({ success: false, message: "OTP expired" });
     }
@@ -312,12 +305,6 @@ export const resetPassword = async (req, res) => {
         .json({ success: false, message: "Invalid or expired token" });
     }
 
-    // if (newPassword !== confirmpassword) {
-    //   return res
-    //     .status(400)
-    //     .json({ success: false, message: "password do not match" });
-    // }
-
     try {
       const hashedPassword = await bcrypt.hash(newPassword, 10);
       // console.log("USER DATA", JSON.stringify(user));
@@ -347,67 +334,6 @@ export const signout = async (req, res) => {
       .json({ success: true, message: "Sign Out Successfully" });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
-  }
-};
-
-/* ================= GOOGLE LOGIN  ================= */
-
-const oauth2Client = new OAuth2Client(
-  process.env.GOOGLE_CLIENT_ID,
-  process.env.GOOGLE_CLIENT_SECRET,
-  "http://localhost:5000/auth/google/callback",
-);
-
-// STEP 1: Redirect user to Google
-export const googleAuth = (req, res) => {
-  const url = oauth2Client.generateAuthUrl({
-    access_type: "offline",
-    scope: ["profile", "email"],
-  });
-
-  res.redirect(url);
-};
-
-// STEP 2: Google callback
-export const googleAuthLogin = async (req, res) => {
-  try {
-    const { code } = req.query;
-
-    console.log("code = ", code);
-    console.log("code = ", req.query);
-
-    // Exchange code for tokens
-    const { tokens } = await oauth2Client.getToken(code);
-    oauth2Client.setCredentials(tokens);
-
-    // Get user info
-    const ticket = oauth2Client.verifyIdToken({
-      idToken: tokens.id_token,
-      audience: process.env.GOOGLE_CLIENT_ID,
-    });
-
-    const { email, picture } = ticket.getPayload();
-
-    // Save / find user
-    let user = await Auth.findOne({ email });
-    if (!user) {
-      user = await Auth.create({
-        email,
-        avatar: picture,
-        provider: "google",
-      });
-    }
-
-    // Create JWT
-    const jwtToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-      expiresIn: "7d",
-    });
-
-    // Redirect to frontend with token
-    res.redirect(`http://192.168.29.213:5173/login-success?token=${jwtToken}`);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, message: "Google Auth Failed" });
   }
 };
 
@@ -442,7 +368,7 @@ export const profile = async (req, res) => {
     // console.log("user old current user = ", user);
     // console.log("user old current password = ", user.password);
 
-    // ✅ Verify current password
+    // Verify current password
     const isMatch = await bcrypt.compare(currentPassword, user.password);
 
     if (!isMatch) {
@@ -469,21 +395,17 @@ export const profile = async (req, res) => {
 
 export const profileImage = async (req, res) => {
   try {
-    // ✅ Validate image
+    // Validate image
     if (!req.file) {
       return res.status(400).json({
         success: false,
         message: "Profile Image is Required. Please select an image",
       });
     }
-    // ✅ REAL image URL from Cloudinary
+    // REAL image URL from Cloudinary
     const imageUrl = req.file.path;
 
     // console.log("imageUrl == ", imageUrl);
-
-    // add this into aprofileIamges for different user for diffrent image ✅✅
-    // user: req.user._id,
-    // imageUrl: req.file.path,
 
     const profileImages = await Profile.create({
       user: req.user.id, // comes from JWT middleware
@@ -502,7 +424,7 @@ export const profileImage = async (req, res) => {
 
 export const getProfileImage = async (req, res) => {
   try {
-    // if doesnt work so remove this content and below uncomment please ✅❎
+    // if doesnt work so remove this content and below uncomment please
     const profileImage = await Profile.findOne({ user: req.user.id })
       .populate("user", "email")
       .sort({ createdAt: -1 });
@@ -548,7 +470,7 @@ export const searchRoutes = async (req, res) => {
       { communityName: 1, isPrivate: 1 }, // projection
     ).limit(10);
 
-    // 🔍 SEARCH POSTS (PURE QUERY)
+    // SEARCH POSTS (PURE QUERY)
     const posts = await Post.find(
       {
         $or: [{ title: regex }, { content: regex }],
@@ -566,9 +488,116 @@ export const searchRoutes = async (req, res) => {
       posts,
     });
   } catch (error) {
-    console.error("Search error:", error);
+    // console.error("Search error:", error);
     return res.status(500).json({
       message: "Search failed",
+    });
+  }
+};
+
+// google login with Access Token
+
+export const googleLogin = async (req, res) => {
+  try {
+    const { access_token } = req.body;
+
+    // console.log(" Google Login Received access token");
+
+    if (!access_token) {
+      // console.error(" Google Login No access token provided");
+      return res.status(400).json({
+        success: false,
+        message: "Access token is required",
+      });
+    }
+
+    // Verify the access token with Google
+    // console.log(" Google Login Fetching user info from Google...");
+    const googleResponse = await axios.get(
+      `https://www.googleapis.com/oauth2/v3/userinfo?access_token=${access_token}`,
+    );
+
+    // console.log("Google Login Google user info:", googleResponse.data);
+
+    const { email, name, picture, sub: googleId } = googleResponse.data;
+
+    if (!email) {
+      // console.error(" Google Login No email in Google response");
+      return res.status(400).json({
+        success: false,
+        message: "Unable to retrieve email from Google",
+      });
+    }
+
+    // Check if user already exists
+    // console.log(" Google Login Checking if user exists:", email);
+    let user = await Auth.findOne({ email });
+
+    if (user) {
+      console.log("Google Login User found, logging in existing user");
+    } else {
+      // Create new user
+      // console.log("Google Login Creating new user");
+      user = new Auth({
+        email,
+        avatar: picture,
+        provider: "google",
+        googleId,
+      });
+
+      // Generate random username
+      const generateRandomName = () => {
+        const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+        let result = "";
+        for (let i = 0; i < 10; i++) {
+          result += chars[Math.floor(Math.random() * chars.length)];
+        }
+        return result;
+      };
+
+      user.username = generateRandomName();
+      // console.log("Google Login Generated username:", user.username);
+    }
+
+    // Generate JWT token
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "7d",
+    });
+
+    // Store token in user document
+    user.token = token;
+    await user.save();
+
+    // console.log(" Google Login User saved successfully");
+    // console.log(" Google Login Generated JWT token");
+
+    return res.status(200).json({
+      success: true,
+      message: "Google login successful",
+      data: {
+        token,
+        username: user.username,
+        user: {
+          _id: user._id,
+          email: user.email,
+          avatar: user.avatar,
+          provider: user.provider,
+        },
+      },
+    });
+  } catch (error) {
+    // Check if it's a Google API error
+    if (error.response?.status === 401) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid or expired Google access token",
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: "Google login failed. Please try again.",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 };

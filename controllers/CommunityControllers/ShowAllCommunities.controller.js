@@ -19,7 +19,7 @@ export const showAllCommunity = async (req, res) => {
           // Check if user is already member
           isMember: { $in: [userId, "$members"] },
 
-          // ✅ FIXED: Check join request correctly
+          //  Check join request correctly
           requestSent: {
             $in: [
               userId,
@@ -60,7 +60,7 @@ export const showAllCommunity = async (req, res) => {
       data: communities,
     });
   } catch (error) {
-    console.log("Show community error:", error.message);
+    // console.log("Show community error:", error.message);
     res.status(500).json({
       success: false,
       message: error.message,

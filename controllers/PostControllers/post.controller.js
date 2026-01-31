@@ -1,162 +1,23 @@
-// import mongoose from "mongoose";
-// import Post from "../../models/PostModels/post.model.js";
-
-// export const createPost = async (req, res) => {
-//   try {
-//     const { title, content, visibility, communityId, imageUrl } = req.body;
-//     const userId = req.user._id; // from auth middleware
-
-//     // 1️⃣ Basic validation
-//     if (!title || !content || !visibility) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Title, content and visibility are required",
-//       });
-//     }
-
-//     // 2️⃣ Visibility-based validation
-//     if (visibility === "Private" && !communityId) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Community is required for private posts",
-//       });
-//     }
-
-//     if (visibility === "Public" && communityId) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Community is not allowed for public posts",
-//       });
-//     }
-
-//     // 3️⃣ Create post object
-//     const postData = {
-//       userId,
-//       title,
-//       content,
-//       visibility,
-//       imageUrl,
-//     };
-
-//     // Add communityId only for private posts
-//     if (visibility === "Private") {
-//       postData.communityId = communityId;
-//     }
-
-//     // 4️⃣ Save post
-//     const post = await Post.create(postData);
-
-//     return res.status(201).json({
-//       success: true,
-//       message: "Post created successfully",
-//       data: post,
-//     });
-//   } catch (error) {
-//     console.error("Create Post Error:", error);
-//     return res.status(500).json({
-//       success: false,
-//       message: "Server error while creating post",
-//     });
-//   }
-// };
-
-// export const showPost = async (req, res) => {
-//   try {
-//     const userId = req.user._id;
-//     // console.log("Logged in userId and posts only:", req.user._id);
-
-//     const post = await Post.aggregate([
-//       {
-//         $match: {
-//           userId: userId,
-//           isDeleted: false, // hide deleted post
-//         },
-//       },
-
-//       {
-//         $lookup: {
-//           from: "communities",
-//           localField: "communityId",
-//           foreignField: "_id",
-//           as: "community",
-//         },
-//       },
-//       { $unwind: "$community" },
-
-//       {
-//         $lookup: {
-//           from: "auths",
-//           localField: "userId",
-//           foreignField: "_id",
-//           as: "user",
-//         },
-//       },
-//       { $unwind: "$user" },
-
-//       {
-//         $project: {
-//           "user.password": 0,
-//           "user.token": 0,
-//           __v: 0,
-//         },
-//       },
-
-//       { $sort: { createdAt: -1 } },
-//     ]);
-//     res.status(200).json({ success: true, data: post });
-//   } catch (error) {
-//     res.status(500).json({ success: false, message: "Server Error" });
-//   }
-// };
-
-// export const deletePost = async (req, res) => {
-//   try {
-//     const post = await Post.findByIdAndUpdate(
-//       req.params.id,
-//       {
-//         isDeleted: true,
-//         deletedAt: new Date(),
-//       },
-//       { new: true },
-//     );
-//     if (!post) {
-//       return res
-//         .status(404)
-//         .json({ success: false, message: "Post Are Not Found" });
-//     }
-//     return res
-//       .status(200)
-//       .json({ success: true, message: "Post Delete Successfully" });
-//   } catch (error) {
-//     res.status(500).json({ success: false, message: "Server Error" });
-//   }
-// };
-
-////////////////////
-
 import mongoose from "mongoose";
 import Post from "../../models/PostModels/post.model.js";
 import Community from "../../models/CommunityModels/community.model.js";
+import Comment from "../../models/PostModels/commentModel.js";
 
-// ========================================
-// CREATE POST
-// ========================================
-// This function creates a new post (public or private)
+//  Create Post
+
 export const createPost = async (req, res) => {
   try {
-    const { title, content, visibility, communityId, imageUrl } = req.body;
-    const userId = req.user._id; // Get logged-in user ID from auth middleware
+    const { title, content, communityId, visibility, imageUrl } = req.body;
 
-    // 1️⃣ BASIC VALIDATION - Check if required fields exist
-    if (!title || !content || !visibility) {
+    // Validation
+    if (!title || !content) {
       return res.status(400).json({
         success: false,
-        message: "Title, content and visibility are required",
+        message: "Title and content are required",
         data: null,
       });
     }
 
-    // 2️⃣ PRIVATE POST VALIDATION - Private posts MUST have a community
     if (visibility === "Private" && !communityId) {
       return res.status(400).json({
         success: false,
@@ -165,158 +26,142 @@ export const createPost = async (req, res) => {
       });
     }
 
-    // 3️⃣ PUBLIC POST VALIDATION - Public posts should NOT have a community
-    if (visibility === "Public" && communityId) {
-      return res.status(400).json({
-        success: false,
-        message: "Public posts cannot be assigned to a community",
-        data: null,
-      });
-    }
-
-    // 4️⃣ CREATE POST OBJECT - Build the post data
-    const postData = {
-      userId,
+    // Create post
+    const newPost = new Post({
+      userId: req.user._id,
       title,
       content,
+      communityId: visibility === "Private" ? communityId : null,
       visibility,
-      imageUrl: imageUrl || "", // Optional field
-    };
+      imageUrl,
+    });
 
-    // Only add communityId for private posts
-    if (visibility === "Private") {
-      postData.communityId = communityId;
-    }
+    await newPost.save();
 
-    // 5️⃣ SAVE POST TO DATABASE
-    const post = await Post.create(postData);
-
-    // 6️⃣ POPULATE USER AND COMMUNITY DATA (for response)
-    const populatedPost = await Post.findById(post._id)
-      .populate("userId", "name email") // Get user info
-      .populate("communityId", "comunityName"); // Get community info (if private)
-
-    // 7️⃣ RETURN SUCCESS RESPONSE
     return res.status(201).json({
       success: true,
-      message: `${visibility} post created successfully`,
-      data: populatedPost,
+      message: "Post created successfully",
+      data: newPost,
     });
   } catch (error) {
-    console.error("Create Post Error:", error);
+    // console.error("Create post error:", error);
     return res.status(500).json({
       success: false,
-      message: "Server error while creating post",
+      message: error.message || "Failed to create post",
       data: null,
     });
   }
 };
 
-// ========================================
-// GET MY POSTS (POST PAGE)
-// ========================================
-// This shows ALL posts created by the logged-in user (both public and private)
+// Get My Posts (User's own posts)
+
 export const getMyPosts = async (req, res) => {
   try {
     const userId = req.user._id;
 
-    // USE AGGREGATION to get posts with detailed info
     const posts = await Post.aggregate([
+      // Stage 1: Match user's posts
       {
-        // 1️⃣ FILTER: Only get posts by this user that are not deleted
         $match: {
           userId: new mongoose.Types.ObjectId(userId),
           isDeleted: false,
         },
       },
+
+      // Stage 2: Lookup user details
       {
-        // 2️⃣ JOIN: Get community data (for private posts)
         $lookup: {
-          from: "communities", // MongoDB collection name
+          from: "auths", // collection name (lowercase + s)
+          localField: "userId",
+          foreignField: "_id",
+          as: "user",
+        },
+      },
+
+      // Stage 3: Unwind user array
+      {
+        $unwind: {
+          path: "$user",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+
+      // Stage 4: Lookup community details (if exists)
+      {
+        $lookup: {
+          from: "communities",
           localField: "communityId",
           foreignField: "_id",
           as: "community",
         },
       },
+
+      // Stage 5: Unwind community array
       {
-        // 3️⃣ HANDLE: Community might be null for public posts
-        $addFields: {
-          community: {
-            $cond: {
-              if: { $eq: [{ $size: "$community" }, 0] },
-              then: null,
-              else: { $arrayElemAt: ["$community", 0] },
-            },
-          },
+        $unwind: {
+          path: "$community",
+          preserveNullAndEmptyArrays: true,
         },
       },
+
+      // Stage 6: Project (select fields)
       {
-        // 4️⃣ JOIN: Get user data
-        $lookup: {
-          from: "auths",
-          localField: "userId",
-          foreignField: "_id",
-          as: "user",
-        },
-      },
-      {
-        // 5️⃣ UNWIND: Convert user array to object
-        $unwind: "$user",
-      },
-      {
-        // 6️⃣ CLEAN: Remove sensitive data
         $project: {
-          "user.password": 0,
-          "user.token": 0,
-          __v: 0,
+          _id: 1,
+          title: 1,
+          content: 1,
+          imageUrl: 1,
+          visibility: 1,
+          likesCount: 1,
+          commentsCount: 1,
+          likes: 1,
+          createdAt: 1,
+          updatedAt: 1,
+          "user._id": 1,
+          "user.username": 1,
+          "user.email": 1,
+          "community._id": 1,
+          "community.comunityName": 1,
         },
       },
+
+      // Stage 7: Sort by newest first
       {
-        // 7️⃣ SORT: Newest posts first
         $sort: { createdAt: -1 },
       },
     ]);
 
-    // COUNT different types of posts
-    const publicCount = posts.filter((p) => p.visibility === "Public").length;
-    const privateCount = posts.filter((p) => p.visibility === "Private").length;
-
     return res.status(200).json({
       success: true,
-      message: "Your posts fetched successfully",
-      data: {
-        posts,
-        count: posts.length,
-        publicCount,
-        privateCount,
-      },
+      message: "Posts fetched successfully",
+      data: { posts },
     });
   } catch (error) {
-    console.error("Get My Posts Error:", error);
+    // console.error("Get my posts error:", error);
     return res.status(500).json({
       success: false,
-      message: "Server error while fetching posts",
+      message: error.message || "Failed to fetch posts",
       data: null,
     });
   }
 };
 
-// ========================================
-// GET PUBLIC POSTS (HOME PAGE)
-// ========================================
-// This shows ONLY public posts from ALL users
+// Get Public Post (All public posts)
+
 export const getPublicPosts = async (req, res) => {
   try {
+    // MongoDB Aggregation Pipeline
     const posts = await Post.aggregate([
+      // Stage 1: Match public posts only
       {
-        // 1️⃣ FILTER: Only public posts that are not deleted
         $match: {
           visibility: "Public",
           isDeleted: false,
         },
       },
+
+      // Stage 2: Lookup user details
       {
-        // 2️⃣ JOIN: Get user data
         $lookup: {
           from: "auths",
           localField: "userId",
@@ -324,20 +169,36 @@ export const getPublicPosts = async (req, res) => {
           as: "user",
         },
       },
+
+      // Stage 3: Unwind user array
       {
-        // 3️⃣ UNWIND: Convert user array to object
-        $unwind: "$user",
-      },
-      {
-        // 4️⃣ CLEAN: Remove sensitive data
-        $project: {
-          "user.password": 0,
-          "user.token": 0,
-          __v: 0,
+        $unwind: {
+          path: "$user",
+          preserveNullAndEmptyArrays: true,
         },
       },
+
+      // Stage 4: Project (select fields)
       {
-        // 5️⃣ SORT: Newest posts first
+        $project: {
+          _id: 1,
+          title: 1,
+          content: 1,
+          imageUrl: 1,
+          visibility: 1,
+          likesCount: 1,
+          commentsCount: 1,
+          likes: 1,
+          createdAt: 1,
+          updatedAt: 1,
+          "user._id": 1,
+          "user.username": 1,
+          "user.email": 1,
+        },
+      },
+
+      // Stage 5: Sort by newest first
+      {
         $sort: { createdAt: -1 },
       },
     ]);
@@ -348,145 +209,31 @@ export const getPublicPosts = async (req, res) => {
       data: posts,
     });
   } catch (error) {
-    console.error("Get Public Posts Error:", error);
+    // console.error("Get public posts error:", error);
     return res.status(500).json({
       success: false,
-      message: "Server error while fetching posts",
+      message: error.message || "Failed to fetch public posts",
       data: null,
     });
   }
 };
 
-// ========================================
-// GET COMMUNITY POSTS
-// ========================================
-// This shows ONLY private posts for a specific community
-// export const getCommunityPosts = async (req, res) => {
-//   try {
-//     const { communityId } = req.params;
-
-//     // VALIDATE: Check if communityId is valid
-//     if (!mongoose.Types.ObjectId.isValid(communityId)) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Invalid community ID",
-//         data: null,
-//       });
-//     }
-
-//     const posts = await Post.aggregate([
-//       {
-//         // 1️⃣ FILTER: Only private posts for this community
-//         $match: {
-//           visibility: "Private",
-//           communityId: new mongoose.Types.ObjectId(communityId),
-//           isDeleted: false,
-//         },
-//       },
-//       {
-//         // 2️⃣ JOIN: Get community data
-//         $lookup: {
-//           from: "communities",
-//           localField: "communityId",
-//           foreignField: "_id",
-//           as: "community",
-//         },
-//       },
-//       {
-//         // 3️⃣ UNWIND: Convert community array to object
-//         $unwind: "$community",
-//       },
-//       {
-//         // 4️⃣ JOIN: Get user data
-//         $lookup: {
-//           from: "auths",
-//           localField: "userId",
-//           foreignField: "_id",
-//           as: "user",
-//         },
-//       },
-//       {
-//         // 5️⃣ UNWIND: Convert user array to object
-//         $unwind: "$user",
-//       },
-//       {
-//         // 6️⃣ CLEAN: Remove sensitive data
-//         $project: {
-//           "user.password": 0,
-//           "user.token": 0,
-//           __v: 0,
-//         },
-//       },
-//       {
-//         // 7️⃣ SORT: Newest posts first
-//         $sort: { createdAt: -1 },
-//       },
-//     ]);
-
-//     return res.status(200).json({
-//       success: true,
-//       message: "Community posts fetched successfully",
-//       data: {
-//         posts,
-//         count: posts.length,
-//       },
-//     });
-//   } catch (error) {
-//     console.error("Get Community Posts Error:", error);
-//     return res.status(500).json({
-//       success: false,
-//       message: "Server error while fetching posts",
-//       data: null,
-//     });
-//   }
-// };
-
-////////////////////////////
+//  Get Comunity Posts
 
 export const getCommunityPosts = async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.user._id; // from protect middleware
 
-    // 1️⃣ Validate communityId
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid community ID",
-        data: null,
-      });
-    }
-
-    // 2️⃣ Check community exists
-    const community = await Community.findById(id);
-
-    if (!community) {
-      return res.status(404).json({
-        success: false,
-        message: "Community not found",
-        data: null,
-      });
-    }
-
-    // 3️⃣ Check access (creator / member)
-    const isCreator = community.userId.toString() === userId.toString();
-    const isMember = community.members?.includes(userId);
-
-    // 4️⃣ Decide visibility
-    // Creator & members → Public + Private
-    // Others → Only Public
-    const visibilityFilter =
-      isCreator || isMember ? { $in: ["Public", "Private"] } : "Public";
-
-    // 5️⃣ Aggregate posts
     const posts = await Post.aggregate([
+      // Stage 1: Match community posts
       {
         $match: {
           communityId: new mongoose.Types.ObjectId(id),
-          visibility: visibilityFilter,
           isDeleted: false,
         },
       },
+
+      // Stage 2: Lookup user details
       {
         $lookup: {
           from: "auths",
@@ -495,7 +242,16 @@ export const getCommunityPosts = async (req, res) => {
           as: "user",
         },
       },
-      { $unwind: "$user" },
+
+      // Stage 3: Unwind user
+      {
+        $unwind: {
+          path: "$user",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+
+      // Stage 4: Lookup community details
       {
         $lookup: {
           from: "communities",
@@ -504,55 +260,63 @@ export const getCommunityPosts = async (req, res) => {
           as: "community",
         },
       },
-      { $unwind: "$community" },
+
+      // Stage 5: Unwind community
       {
-        $project: {
-          "user.password": 0,
-          "user.token": 0,
-          "community.joinRequests": 0,
-          __v: 0,
+        $unwind: {
+          path: "$community",
+          preserveNullAndEmptyArrays: true,
         },
       },
-      { $sort: { createdAt: -1 } },
+
+      // Stage 6: Project
+      {
+        $project: {
+          _id: 1,
+          title: 1,
+          content: 1,
+          imageUrl: 1,
+          visibility: 1,
+          likesCount: 1,
+          commentsCount: 1,
+          likes: 1,
+          createdAt: 1,
+          updatedAt: 1,
+          "user._id": 1,
+          "user.username": 1,
+          "user.email": 1,
+          "community._id": 1,
+          "community.comunityName": 1,
+        },
+      },
+
+      // Stage 7: Sort by newest first
+      {
+        $sort: { createdAt: -1 },
+      },
     ]);
 
-    // 6️⃣ Response
     return res.status(200).json({
       success: true,
       message: "Community posts fetched successfully",
-      data: {
-        posts,
-        count: posts.length,
-      },
+      data: { posts },
     });
   } catch (error) {
-    console.error("Get Community Posts Error:", error);
+    // console.error("Get community posts error:", error);
     return res.status(500).json({
       success: false,
-      message: "Server error while fetching community posts",
+      message: error.message || "Failed to fetch community posts",
       data: null,
     });
   }
 };
-// ========================================
-// DELETE POST (SOFT DELETE)
-// ========================================
-// This marks a post as deleted without actually removing it from database
+
+//  Delete Post
+
 export const deletePost = async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.user._id;
 
-    // 1️⃣ VALIDATE: Check if post ID is valid
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid post ID",
-        data: null,
-      });
-    }
-
-    // 2️⃣ FIND POST
     const post = await Post.findById(id);
 
     if (!post) {
@@ -563,25 +327,16 @@ export const deletePost = async (req, res) => {
       });
     }
 
-    // 3️⃣ AUTHORIZATION: Check if user owns this post
-    if (post.userId.toString() !== userId.toString()) {
+    // Check ownership
+    if (post.userId.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         success: false,
-        message: "You are not authorized to delete this post",
+        message: "Not authorized to delete this post",
         data: null,
       });
     }
 
-    // 4️⃣ CHECK: If already deleted
-    if (post.isDeleted) {
-      return res.status(400).json({
-        success: false,
-        message: "Post is already deleted",
-        data: null,
-      });
-    }
-
-    // 5️⃣ SOFT DELETE: Mark as deleted
+    // Soft delete
     post.isDeleted = true;
     post.deletedAt = new Date();
     await post.save();
@@ -592,10 +347,303 @@ export const deletePost = async (req, res) => {
       data: null,
     });
   } catch (error) {
-    console.error("Delete Post Error:", error);
+    // console.error("Delete post error:", error);
     return res.status(500).json({
       success: false,
-      message: "Server error while deleting post",
+      message: error.message || "Failed to delete post",
+      data: null,
+    });
+  }
+};
+
+//  Like and UnLike Post
+
+export const toggleLike = async (req, res) => {
+  try {
+    const { postId } = req.params;
+    const userId = req.user._id;
+
+    // Find post
+    const post = await Post.findById(postId);
+
+    if (!post) {
+      return res.status(404).json({
+        success: false,
+        message: "Post not found",
+        data: null,
+      });
+    }
+
+    if (post.isDeleted) {
+      return res.status(400).json({
+        success: false,
+        message: "Cannot like a deleted post",
+        data: null,
+      });
+    }
+
+    // Check if user already liked
+    const hasLiked = post.likes.some(
+      (id) => id.toString() === userId.toString(),
+    );
+
+    let message;
+    let liked;
+
+    if (hasLiked) {
+      // UnLike
+      post.likes = post.likes.filter(
+        (id) => id.toString() !== userId.toString(),
+      );
+      post.likesCount = Math.max(0, post.likesCount - 1);
+      message = "Post unliked";
+      liked = false;
+    } else {
+      // Like
+      post.likes.push(userId);
+      post.likesCount += 1;
+      message = "Post liked";
+      liked = true;
+    }
+
+    await post.save();
+
+    return res.status(200).json({
+      success: true,
+      message: message,
+      data: {
+        liked: liked,
+        likesCount: post.likesCount,
+      },
+    });
+  } catch (error) {
+    // console.error("Toggle like error:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to toggle like",
+      data: null,
+    });
+  }
+};
+
+// Add Comment
+
+export const addComment = async (req, res) => {
+  try {
+    const { postId } = req.params;
+    const { text } = req.body;
+    const userId = req.user._id;
+
+    // Validation
+    if (!text || text.trim().length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Comment text is required",
+        data: null,
+      });
+    }
+
+    // Check if post exists
+    const post = await Post.findById(postId);
+
+    if (!post) {
+      return res.status(404).json({
+        success: false,
+        message: "Post not found",
+        data: null,
+      });
+    }
+
+    if (post.isDeleted) {
+      return res.status(400).json({
+        success: false,
+        message: "Cannot comment on a deleted post",
+        data: null,
+      });
+    }
+
+    // Create comment
+    const comment = new Comment({
+      postId,
+      userId,
+      text: text.trim(),
+    });
+
+    await comment.save();
+
+    // Increment comment count
+    post.commentsCount += 1;
+    await post.save();
+
+    // Get comment with user details using aggregation
+    const commentWithUser = await Comment.aggregate([
+      {
+        $match: {
+          _id: comment._id,
+        },
+      },
+      {
+        $lookup: {
+          from: "auths",
+          localField: "userId",
+          foreignField: "_id",
+          as: "userId",
+        },
+      },
+      {
+        $unwind: "$userId",
+      },
+      {
+        $project: {
+          _id: 1,
+          postId: 1,
+          text: 1,
+          createdAt: 1,
+          "userId._id": 1,
+          "userId.username": 1,
+          "userId.email": 1,
+        },
+      },
+    ]);
+
+    return res.status(201).json({
+      success: true,
+      message: "Comment added successfully",
+      data: commentWithUser[0],
+    });
+  } catch (error) {
+    // console.error("Add comment error:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to add comment",
+      data: null,
+    });
+  }
+};
+
+// Get Comments
+
+export const getComments = async (req, res) => {
+  try {
+    const { postId } = req.params;
+
+    // Check if post exists
+    const post = await Post.findById(postId);
+
+    if (!post) {
+      return res.status(404).json({
+        success: false,
+        message: "Post not found",
+        data: null,
+      });
+    }
+
+    // Fetch comments using aggregation
+    const comments = await Comment.aggregate([
+      // Stage 1: Match comments for this post
+      {
+        $match: {
+          postId: new mongoose.Types.ObjectId(postId),
+          isDeleted: false,
+        },
+      },
+
+      // Stage 2: Lookup user details
+      {
+        $lookup: {
+          from: "auths",
+          localField: "userId",
+          foreignField: "_id",
+          as: "userId",
+        },
+      },
+
+      // Stage 3: Unwind user
+      {
+        $unwind: {
+          path: "$userId",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+
+      // Stage 4: Project
+      {
+        $project: {
+          _id: 1,
+          postId: 1,
+          text: 1,
+          createdAt: 1,
+          "userId._id": 1,
+          "userId.username": 1,
+          "userId.email": 1,
+        },
+      },
+
+      // Stage 5: Sort by oldest first
+      {
+        $sort: { createdAt: 1 },
+      },
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      message: "Comments fetched successfully",
+      data: comments,
+    });
+  } catch (error) {
+    // console.error("Get comments error:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to fetch comments",
+      data: null,
+    });
+  }
+};
+
+// Delete Comment
+
+export const deleteComment = async (req, res) => {
+  try {
+    const { commentId } = req.params;
+
+    const comment = await Comment.findById(commentId);
+
+    if (!comment) {
+      return res.status(404).json({
+        success: false,
+        message: "Comment not found",
+        data: null,
+      });
+    }
+
+    // Check ownership
+    if (comment.userId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized to delete this comment",
+        data: null,
+      });
+    }
+
+    // Soft delete
+    comment.isDeleted = true;
+    await comment.save();
+
+    // Decrement comment count
+    await Post.findByIdAndUpdate(comment.postId, {
+      $inc: { commentsCount: -1 },
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Comment deleted successfully",
+      data: null,
+    });
+  } catch (error) {
+    // console.error("Delete comment error:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to delete comment",
       data: null,
     });
   }

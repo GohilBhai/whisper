@@ -3,20 +3,20 @@ import Auth from "../../models/AuthModels/auth.model.js";
 import DirectChat from "../../models/MessageModels/DirectChat.js";
 import DirectMessage from "../../models/MessageModels/DirectMessage.js";
 
-// ✅ Get or Create Direct Chat between two users
+//  Get or Create Direct Chat between two users
 export const getOrCreateDirectChat = async (req, res) => {
   try {
     const { receiverId } = req.body;
     const senderId = req.user._id;
 
-    console.log("📨 Get/Create Direct Chat Request:");
-    console.log("Sender ID:", senderId);
-    console.log("Receiver ID:", receiverId);
+    // console.log("📨 Get/Create Direct Chat Request:");
+    // console.log("Sender ID:", senderId);
+    // console.log("Receiver ID:", receiverId);
 
     // Validate receiver exists
     const receiverExists = await Auth.findById(receiverId);
     if (!receiverExists) {
-      console.log("❌ Receiver not found");
+      // console.log("❌ Receiver not found");
       return res.status(404).json({
         success: false,
         message: "User not found",
@@ -40,7 +40,7 @@ export const getOrCreateDirectChat = async (req, res) => {
       },
     ]);
 
-    console.log("🔍 Existing chat found:", existingChat.length > 0);
+    // console.log("Existing chat found:", existingChat.length > 0);
 
     let directChat;
 
@@ -52,7 +52,7 @@ export const getOrCreateDirectChat = async (req, res) => {
       directChat = await DirectChat.create({
         participants: [senderId, receiverId],
       });
-      console.log("✅ New chat created:", directChat._id);
+      // console.log("New chat created:", directChat._id);
     }
 
     return res.status(200).json({
@@ -64,7 +64,7 @@ export const getOrCreateDirectChat = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("❌ Error in getOrCreateDirectChat:", error);
+    // console.error("❌ Error in getOrCreateDirectChat:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to get or create chat",
@@ -79,14 +79,14 @@ export const getDirectMessages = async (req, res) => {
     const { chatId } = req.params;
     const userId = req.user._id;
 
-    console.log("📩 Get Messages Request:");
-    console.log("Chat ID:", chatId);
-    console.log("User ID:", userId);
+    // console.log("📩 Get Messages Request:");
+    // console.log("Chat ID:", chatId);
+    // console.log("User ID:", userId);
 
     // Verify user is part of this chat
     const chat = await DirectChat.findById(chatId);
     if (!chat) {
-      console.log("❌ Chat not found");
+      // console.log("Chat not found");
       return res.status(404).json({
         success: false,
         message: "Chat not found",
@@ -98,7 +98,7 @@ export const getDirectMessages = async (req, res) => {
     );
 
     if (!isParticipant) {
-      console.log("❌ User not authorized for this chat");
+      // console.log("User not authorized for this chat");
       return res.status(403).json({
         success: false,
         message: "Not authorized to view this chat",
@@ -158,7 +158,7 @@ export const getDirectMessages = async (req, res) => {
       },
     ]);
 
-    console.log("✅ Messages fetched:", messages.length);
+    // console.log("Messages fetched:", messages.length);
 
     return res.status(200).json({
       success: true,
@@ -169,7 +169,7 @@ export const getDirectMessages = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("❌ Error in getDirectMessages:", error);
+    // console.error("Error in getDirectMessages:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to get messages",
@@ -178,22 +178,22 @@ export const getDirectMessages = async (req, res) => {
   }
 };
 
-// ✅ Send a message (HTTP endpoint - backup for socket)
+// Send a message (HTTP endpoint - backup for socket)
 export const sendDirectMessage = async (req, res) => {
   try {
     const { chatId, receiverId, message } = req.body;
     const senderId = req.user._id;
 
-    console.log("💬 Send Message Request:");
-    console.log("Chat ID:", chatId);
-    console.log("Sender ID:", senderId);
-    console.log("Receiver ID:", receiverId);
-    console.log("Message:", message);
+    // console.log("💬 Send Message Request:");
+    // console.log("Chat ID:", chatId);
+    // console.log("Sender ID:", senderId);
+    // console.log("Receiver ID:", receiverId);
+    // console.log("Message:", message);
 
     // Validate chat exists
     const chat = await DirectChat.findById(chatId);
     if (!chat) {
-      console.log("❌ Chat not found");
+      // console.log(" Chat not found");
       return res.status(404).json({
         success: false,
         message: "Chat not found",
@@ -266,7 +266,7 @@ export const sendDirectMessage = async (req, res) => {
 
     const populatedMessage = populatedMessages[0];
 
-    console.log("✅ Message sent successfully:", populatedMessage._id);
+    // console.log("Message sent successfully:", populatedMessage._id);
 
     return res.status(201).json({
       success: true,
@@ -274,7 +274,7 @@ export const sendDirectMessage = async (req, res) => {
       data: populatedMessage,
     });
   } catch (error) {
-    console.error("❌ Error in sendDirectMessage:", error);
+    // console.error(" Error in sendDirectMessage:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to send message",
@@ -283,13 +283,13 @@ export const sendDirectMessage = async (req, res) => {
   }
 };
 
-// ✅ Get all chats for current user
+//  Get all chats for current user
 export const getAllUserChats = async (req, res) => {
   try {
     const userId = req.user._id;
 
-    console.log("📋 Get All User Chats Request:");
-    console.log("User ID:", userId);
+    // console.log("📋 Get All User Chats Request:");
+    // console.log("User ID:", userId);
 
     // Get all chats using aggregate
     const chats = await DirectChat.aggregate([
@@ -327,7 +327,7 @@ export const getAllUserChats = async (req, res) => {
       },
     ]);
 
-    console.log("✅ Chats fetched:", chats.length);
+    // console.log(" Chats fetched:", chats.length);
 
     // Format response to show other participant info
     const formattedChats = chats.map((chat) => {
@@ -353,7 +353,7 @@ export const getAllUserChats = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("❌ Error in getAllUserChats:", error);
+    // console.error(" Error in getAllUserChats:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to get chats",
@@ -362,15 +362,15 @@ export const getAllUserChats = async (req, res) => {
   }
 };
 
-// ✅ Mark messages as read
+// Mark messages as read
 export const markMessagesAsRead = async (req, res) => {
   try {
     const { chatId } = req.params;
     const userId = req.user._id;
 
-    console.log("✓ Mark Messages as Read:");
-    console.log("Chat ID:", chatId);
-    console.log("User ID:", userId);
+    // console.log("✓ Mark Messages as Read:");
+    // console.log("Chat ID:", chatId);
+    // console.log("User ID:", userId);
 
     // Mark all unread messages as read where user is receiver
     const result = await DirectMessage.updateMany(
@@ -384,7 +384,7 @@ export const markMessagesAsRead = async (req, res) => {
       },
     );
 
-    console.log("✅ Messages marked as read:", result.modifiedCount);
+    // console.log("Messages marked as read:", result.modifiedCount);
 
     return res.status(200).json({
       success: true,
@@ -394,7 +394,7 @@ export const markMessagesAsRead = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("❌ Error in markMessagesAsRead:", error);
+    // console.error("Error in markMessagesAsRead:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to mark messages as read",
@@ -403,13 +403,13 @@ export const markMessagesAsRead = async (req, res) => {
   }
 };
 
-// ✅ Get user details by ID
+// Get user details by ID
 export const getUserById = async (req, res) => {
   try {
     const { userId } = req.params;
 
-    console.log("👤 Get User By ID Request:");
-    console.log("User ID:", userId);
+    // console.log("👤 Get User By ID Request:");
+    // console.log("User ID:", userId);
 
     // Using aggregate for consistency
     const userResult = await Auth.aggregate([
@@ -431,7 +431,7 @@ export const getUserById = async (req, res) => {
     ]);
 
     if (!userResult || userResult.length === 0) {
-      console.log("❌ User not found");
+      // console.log(" User not found");
       return res.status(404).json({
         success: false,
         message: "User not found",
@@ -439,7 +439,7 @@ export const getUserById = async (req, res) => {
     }
 
     const user = userResult[0];
-    console.log("✅ User found:", user.username || user.email);
+    // console.log("User found:", user.username || user.email);
 
     return res.status(200).json({
       success: true,
@@ -447,7 +447,7 @@ export const getUserById = async (req, res) => {
       data: user,
     });
   } catch (error) {
-    console.error("❌ Error in getUserById:", error);
+    // console.error(" Error in getUserById:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to get user",

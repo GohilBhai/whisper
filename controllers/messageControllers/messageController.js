@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 import Message from "../../models/MessageModels/Message.js";
 import { getIO } from "../../socket/socket.js";
 
-// ✅ Get all messages for a community
+// Get all messages for a community
 export const getMessages = async (req, res) => {
   try {
     const { communityId } = req.params;
@@ -55,7 +55,7 @@ export const getMessages = async (req, res) => {
       data: messages,
     });
   } catch (error) {
-    console.error("Get Messages Error:", error);
+    // console.error("Get Messages Error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to fetch messages",
@@ -64,7 +64,7 @@ export const getMessages = async (req, res) => {
   }
 };
 
-// ✅ Send a new message
+//  Send a new message
 export const sendMessage = async (req, res) => {
   try {
     const { communityId } = req.params;
@@ -120,11 +120,11 @@ export const sendMessage = async (req, res) => {
 
     const formattedMessage = messageWithSender[0];
 
-    // ✅ Broadcast message to ALL users in the community room via Socket.IO
+    //  Broadcast message to ALL users in the community room via Socket.IO
     try {
       const io = getIO();
       io.to(communityId).emit("receive-message", formattedMessage);
-      console.log(`✅ Message broadcasted to community: ${communityId}`);
+      // console.log(` Message broadcasted to community: ${communityId}`);
     } catch (socketError) {
       console.error("Socket broadcast error:", socketError);
       // Continue even if socket fails - message is saved to DB
@@ -136,7 +136,7 @@ export const sendMessage = async (req, res) => {
       data: formattedMessage,
     });
   } catch (error) {
-    console.error("Send Message Error:", error);
+    // console.error("Send Message Error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to send message",
